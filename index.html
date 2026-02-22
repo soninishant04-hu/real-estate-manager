@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Real Estate Manager</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  margin: 0;
+  padding: 20px;
+  color: #333;
+}
+
+.container {
+  max-width: 1200px;
+  margin: auto;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(10px);
+  padding: 25px;
+  border-radius: 15px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.form-grid, .filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 15px;
+}
+
+input, select {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  outline: none;
+  font-size: 14px;
+}
+
+input:focus, select:focus {
+  border-color: #2c5364;
+  box-shadow: 0 0 5px rgba(44,83,100,0.5);
+}
+
+button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+.save-btn { background: #2c5364; color: white; }
+.save-btn:hover { background: #203a43; }
+
+.edit-btn { background: #ffc107; }
+.delete-btn { background: #dc3545; color: white; }
+
+.filter-btn { background: #17a2b8; color: white; }
+.clear-btn { background: gray; color: white; }
+
+.map-btn {
+  background: #28a745;
+  color: white;
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 25px;
+}
+
+th {
+  background: #2c5364;
+  color: white;
+}
+
+th, td {
+  padding: 10px;
+  text-align: center;
+  border-bottom: 1px solid #ddd;
+}
+
+tr:hover { background: #f1f1f1; }
+
+img {
+  width: 60px;
+  border-radius: 5px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>🏢 Real Estate Manager</h2>
+
+<div class="form-grid">
+<input type="text" id="lead" placeholder="Came Through">
+<input type="text" id="name" placeholder="Person Name">
+<input type="text" id="areaLocation" placeholder="Area Location">
+<input type="text" id="mapLink" placeholder="Paste Google Map Link">
+
+<select id="category">
+<option>Residential</option>
+<option>Commercial</option>
+</select>
+
+<select id="type">
+<option>Plot</option>
+<option>Flat</option>
+<option>Bungalow</option>
+<option>Shop</option>
+<option>Office</option>
+</select>
+
+<input type="text" id="totalArea" placeholder="Total Area (1200 sqft / 50 gaj)">
+<input type="text" id="constructionArea" placeholder="Construction Area">
+<input type="text" id="price" placeholder="Price (50 lakh / 1.2 cr)">
+<input type="file" id="photo" accept="image/*">
+</div>
+
+<br>
+<center>
+<button class="save-btn" onclick="addProperty()">Save Property</button>
+</center>
+
+<hr>
+
+<h2>🔍 Search & Filter</h2>
+
+<div class="filter-grid">
+<input type="text" id="searchArea" placeholder="Search by Area Location">
+
+<select id="filterCategory">
+<option value="">All Categories</option>
+<option>Residential</option>
+<option>Commercial</option>
+</select>
+
+<select id="filterType">
+<option value="">All Types</option>
+<option>Plot</option>
+<option>Flat</option>
+<option>Bungalow</option>
+<option>Shop</option>
+<option>Office</option>
+</select>
+
+<button class="filter-btn" onclick="applyFilter()">Search</button>
+<button class="clear-btn" onclick="clearFilter()">Clear</button>
+</div>
+
+<h2>Property List</h2>
+
+<table>
+<thead>
+<tr>
+<th>Lead</th>
+<th>Name</th>
+<th>Location</th>
+<th>Category</th>
+<th>Type</th>
+<th>Total</th>
+<th>Construct</th>
+<th>Price</th>
+<th>Photo</th>
+<th>Map</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody id="list"></tbody>
+</table>
+
+</div>
+
+<script>
+let properties = JSON.parse(localStorage.getItem("properties")) || [];
+let editIndex = -1;
+
+function display(data = properties) {
+  let list = document.getElementById("list");
+  list.innerHTML = "";
+
+  data.forEach((p, index) => {
+    list.innerHTML += `
+      <tr>
+        <td>${p.lead}</td>
+        <td>${p.name}</td>
+        <td>${p.areaLocation}</td>
+        <td>${p.category}</td>
+        <td>${p.type}</td>
+        <td>${p.totalArea}</td>
+        <td>${p.constructionArea}</td>
+        <td>${p.price}</td>
+        <td>${p.photo ? '<img src="'+p.photo+'">' : ''}</td>
+        <td>${p.mapLink ? `<a class="map-btn" href="${p.mapLink}" target="_blank">Open Map</a>` : ''}</td>
+        <td>
+          <button class="edit-btn" onclick="editProperty(${index})">Edit</button>
+          <button class="delete-btn" onclick="deleteProperty(${index})">Delete</button>
+        </td>
+      </tr>
+    `;
+  });
+}
+
+function addProperty() {
+  let file = document.getElementById("photo").files[0];
+  let reader = new FileReader();
+
+  reader.onload = function() {
+    let property = {
+      lead: document.getElementById("lead").value,
+      name: document.getElementById("name").value,
+      areaLocation: document.getElementById("areaLocation").value,
+      mapLink: document.getElementById("mapLink").value,
+      category: document.getElementById("category").value,
+      type: document.getElementById("type").value,
+      totalArea: document.getElementById("totalArea").value,
+      constructionArea: document.getElementById("constructionArea").value,
+      price: document.getElementById("price").value,
+      photo: reader.result
+    };
+
+    if(editIndex === -1) {
+      properties.push(property);
+    } else {
+      properties[editIndex] = property;
+      editIndex = -1;
+    }
+
+    localStorage.setItem("properties", JSON.stringify(properties));
+    display();
+  };
+
+  if(file) {
+    reader.readAsDataURL(file);
+  } else {
+    reader.onload();
+  }
+}
+
+function editProperty(index) {
+  let p = properties[index];
+  document.getElementById("lead").value = p.lead;
+  document.getElementById("name").value = p.name;
+  document.getElementById("areaLocation").value = p.areaLocation;
+  document.getElementById("mapLink").value = p.mapLink;
+  document.getElementById("category").value = p.category;
+  document.getElementById("type").value = p.type;
+  document.getElementById("totalArea").value = p.totalArea;
+  document.getElementById("constructionArea").value = p.constructionArea;
+  document.getElementById("price").value = p.price;
+  editIndex = index;
+}
+
+function deleteProperty(index) {
+  properties.splice(index, 1);
+  localStorage.setItem("properties", JSON.stringify(properties));
+  display();
+}
+
+function applyFilter() {
+  let search = document.getElementById("searchArea").value.toLowerCase();
+  let category = document.getElementById("filterCategory").value;
+  let type = document.getElementById("filterType").value;
+
+  let filtered = properties.filter(p =>
+    p.areaLocation.toLowerCase().includes(search) &&
+    (category === "" || p.category === category) &&
+    (type === "" || p.type === type)
+  );
+
+  display(filtered);
+}
+
+function clearFilter() {
+  document.getElementById("searchArea").value = "";
+  document.getElementById("filterCategory").value = "";
+  document.getElementById("filterType").value = "";
+  display();
+}
+
+display();
+</script>
+
+</body>
+</html>
